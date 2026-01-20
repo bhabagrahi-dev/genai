@@ -51,7 +51,7 @@ function App() {
     const response = await fetch('https://genai-python-klwp.onrender.com/text', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: currentInput })
+      body: JSON.stringify({ prompt: currentInput })
     });
     
     const data = await response.json();
