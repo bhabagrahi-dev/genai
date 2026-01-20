@@ -48,7 +48,7 @@ function App() {
   setInput("");
 
   try {
-    const response = await fetch('https://your-api-url.com/chat', {
+    const response = await fetch('https://genai-python-klwp.onrender.com/text', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: currentInput })
