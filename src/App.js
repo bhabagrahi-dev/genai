@@ -46,6 +46,7 @@ function App() {
   setMessages((prev) => [...prev, userMessage]);
   const currentInput = input;
   setInput("");
+  setIsLoading(true);
 
   try {
     const response = await fetch('https://genai-python-klwp.onrender.com/text', {
@@ -78,6 +79,9 @@ function App() {
       sender: "bot" 
     };
     setMessages((prev) => [...prev, crashMessage]);
+  } finally {
+    // 2. Stop loading regardless of success or failure
+    setIsLoading(false);
   }
 };
 
@@ -108,6 +112,17 @@ function App() {
             </div>
           ))
         )}
+
+        {isLoading && (
+        <div className="message-row bot">
+          <div className="bubble loading-bubble">
+            <div className="dot"></div>
+            <div className="dot"></div>
+            <div className="dot"></div>
+          </div>
+        </div>
+      )}
+        
       </div>
 
       <div className="input-area">
