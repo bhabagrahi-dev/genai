@@ -20,7 +20,8 @@ function App() {
 
     try {
       // 3. Call your API (Replace with your actual URL)
-      const response = await fetch('https://bhabagrahi-ai.hf.space/generate', {
+      // const response = await fetch('https://bhabagrahi-ai.hf.space/generate', {
+      const response = await fetch('https://genai-python-klwp.onrender.com/text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: currentInput })
