@@ -6,6 +6,8 @@ function App() {
   // 'messages' stores the history, 'input' stores what you are currently typing
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  // ADDED THIS LINE: Necessary for the loading animation to work
+  const [isLoading, setIsLoading] = useState(false);
 
   // const sendMessage = async () => {
   //   if (input.trim() === "") return;
