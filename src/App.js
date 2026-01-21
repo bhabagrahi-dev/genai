@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import myLogo from './ai_logo.png';
+
+// ✅ ADDED: Markdown renderer
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 function App() {
   // 'messages' stores the history, 'input' stores what you are currently typing
@@ -8,6 +12,35 @@ function App() {
   const [input, setInput] = useState("");
   // ADDED THIS LINE: Necessary for the loading animation to work
   const [isLoading, setIsLoading] = useState(false);
+
+  // ✅ ADDED: ref to auto-scroll
+  const bottomRef = useRef(null);
+
+  // ✅ ADDED: Auto-scroll whenever messages change (streaming updates too)
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // ✅ ADDED: Beautify raw text into better Markdown formatting
+  const beautifyResponse = (text) => {
+    if (!text) return "";
+
+    let t = text;
+
+    // Add spacing around markdown bold headings
+    t = t.replace(/(\*\*[^*]+\*\*)/g, "\n\n$1\n\n");
+
+    // Put numbered points on new lines
+    t = t.replace(/(\s)(\d+\.)\s/g, "\n$2 ");
+
+    // Put bullet points on new lines
+    t = t.replace(/(\s)([-*])\s/g, "\n$2 ");
+
+    // Reduce too many blank lines
+    t = t.replace(/\n{3,}/g, "\n\n");
+
+    return t.trim();
+  };
 
   // ✅ ADDED: helper to update last bot message during streaming
   const updateLastBotMessage = (newText) => {
@@ -117,7 +150,9 @@ function App() {
 
             if (data.token) {
               fullText += data.token;
-              updateLastBotMessage(fullText);
+
+              // ✅ Beautify live text while streaming
+              updateLastBotMessage(beautifyResponse(fullText));
             }
 
             if (data.error) {
@@ -126,6 +161,8 @@ function App() {
             }
 
             if (data.done) {
+              // final beautify once done
+              updateLastBotMessage(beautifyResponse(fullText));
               return;
             }
           }
@@ -168,7 +205,18 @@ function App() {
         ) : (
           messages.map((msg, index) => (
             <div key={index} className={`message-row ${msg.sender}`}>
-              <div className="bubble">{msg.text}</div>
+              <div className="bubble">
+                {/* ✅ ADDED: Markdown render for bot messages */}
+                {msg.sender === "bot" ? (
+                  <div className="markdown-bubble">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.text}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  msg.text
+                )}
+              </div>
             </div>
           ))
         )}
@@ -183,6 +231,9 @@ function App() {
             </div>
           </div>
         )}
+
+        {/* ✅ ADDED: bottom marker for auto-scroll */}
+        <div ref={bottomRef} />
 
       </div>
 
