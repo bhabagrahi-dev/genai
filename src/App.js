@@ -173,7 +173,8 @@ function App() {
           ))
         )}
 
-        {isLoading && (
+        {/* ✅ Loader disabled because streaming is the loader now */}
+        {false && isLoading && (
           <div className="message-row bot">
             <div className="bubble loading-bubble">
               <div className="dot"></div>
