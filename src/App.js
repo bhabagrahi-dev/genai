@@ -9,6 +9,20 @@ function App() {
   // ADDED THIS LINE: Necessary for the loading animation to work
   const [isLoading, setIsLoading] = useState(false);
 
+  // ✅ ADDED: helper to update last bot message during streaming
+  const updateLastBotMessage = (newText) => {
+    setMessages((prev) => {
+      const updated = [...prev];
+      for (let i = updated.length - 1; i >= 0; i--) {
+        if (updated[i].sender === "bot") {
+          updated[i] = { ...updated[i], text: newText };
+          break;
+        }
+      }
+      return updated;
+    });
+  };
+
   // const sendMessage = async () => {
   //   if (input.trim() === "") return;
 
@@ -42,50 +56,94 @@ function App() {
   // };
 
   const sendMessage = async () => {
-  if (input.trim() === "") return;
+    if (input.trim() === "") return;
 
-  const userMessage = { text: input, sender: "user" };
-  setMessages((prev) => [...prev, userMessage]);
-  const currentInput = input;
-  setInput("");
-  setIsLoading(true);
+    const userMessage = { text: input, sender: "user" };
+    setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
+    setInput("");
+    setIsLoading(true);
 
-  try {
-    const response = await fetch('https://genai-python-klwp.onrender.com/text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: currentInput })
-    });
-    
-    const data = await response.json();
+    // ✅ ADDED: add empty bot message first (placeholder bubble)
+    setMessages((prev) => [...prev, { text: "", sender: "bot" }]);
 
-    // --- ERROR CACHE LOGIC START ---
-    if (data.status === "success") {
-      // If success, show the actual result
-      const botMessage = { text: data.result, sender: "bot" };
-      setMessages((prev) => [...prev, botMessage]);
-    } else {
-      // If status is anything else, show a friendly error bubble
-      const errorMessage = { 
-        text: "Server Error: Unable to get a valid response. Please try again later.", 
-        sender: "bot" 
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+    try {
+      // ✅ CHANGED: call streaming endpoint instead of /text
+      const response = await fetch('https://genai-python-klwp.onrender.com/text-stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream'
+        },
+        body: JSON.stringify({ prompt: currentInput })
+      });
+
+      // ✅ ADDED: if server fails
+      if (!response.ok) {
+        updateLastBotMessage("Server Error: Unable to get a valid response. Please try again later.");
+        return;
+      }
+
+      // ✅ ADDED: Read streaming response
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+
+      let fullText = "";
+      let buffer = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // SSE events separated by blank line
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop(); // keep leftover
+
+        for (const part of parts) {
+          if (part.startsWith("data: ")) {
+            const jsonStr = part.replace("data: ", "").trim();
+
+            // sometimes servers send empty data lines
+            if (!jsonStr) continue;
+
+            let data;
+            try {
+              data = JSON.parse(jsonStr);
+            } catch (e) {
+              continue;
+            }
+
+            if (data.token) {
+              fullText += data.token;
+              updateLastBotMessage(fullText);
+            }
+
+            if (data.error) {
+              updateLastBotMessage("Server Error: " + data.error);
+              return;
+            }
+
+            if (data.done) {
+              return;
+            }
+          }
+        }
+      }
+
+      // --- ERROR CACHE LOGIC START ---
+      // (keeping your logic untouched, but streaming already handles this)
+      // --- ERROR CACHE LOGIC END ---
+
+    } catch (error) {
+      // This catches network crashes (e.g., if the server is totally down)
+      updateLastBotMessage("Network Error: Could not connect to the server.");
+    } finally {
+      // 2. Stop loading regardless of success or failure
+      setIsLoading(false);
     }
-    // --- ERROR CACHE LOGIC END ---
-
-  } catch (error) {
-    // This catches network crashes (e.g., if the server is totally down)
-    const crashMessage = { 
-      text: "Network Error: Could not connect to the server.", 
-      sender: "bot" 
-    };
-    setMessages((prev) => [...prev, crashMessage]);
-  } finally {
-    // 2. Stop loading regardless of success or failure
-    setIsLoading(false);
-  }
-};
+  };
 
   return (
     <div className="app-container">
@@ -116,15 +174,15 @@ function App() {
         )}
 
         {isLoading && (
-        <div className="message-row bot">
-          <div className="bubble loading-bubble">
-            <div className="dot"></div>
-            <div className="dot"></div>
-            <div className="dot"></div>
+          <div className="message-row bot">
+            <div className="bubble loading-bubble">
+              <div className="dot"></div>
+              <div className="dot"></div>
+              <div className="dot"></div>
+            </div>
           </div>
-        </div>
-      )}
-        
+        )}
+
       </div>
 
       <div className="input-area">
