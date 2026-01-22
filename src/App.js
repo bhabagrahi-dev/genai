@@ -9,7 +9,7 @@ import remarkGfm from "remark-gfm";
 function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  // const [isLoading, setIsLoading] = useState(false);
 
   // ✅ ADDED: Predefined prompt suggestions for the UI
   const suggestions = [
@@ -60,7 +60,7 @@ function App() {
     // Clear input if we are using the text box
     if (!suggestedText) setInput("");
     
-    setIsLoading(true);
+    // setIsLoading(true);
 
     // Add empty bot placeholder
     setMessages((prev) => [...prev, { text: "", sender: "bot" }]);
@@ -119,9 +119,10 @@ function App() {
       }
     } catch (error) {
       updateLastBotMessage("Network Error: Could not connect to the server.");
-    } finally {
-      setIsLoading(false);
-    }
+    } 
+    // finally {
+    //   setIsLoading(false);
+    // }
   };
 
   return (
