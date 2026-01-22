@@ -1,17 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import myLogo from './ai_logo.png';
-
-// ✅ ADDED: Markdown renderer
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  // const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // ✅ Now correctly used below
 
-  // ✅ ADDED: Predefined prompt suggestions for the UI
   const suggestions = [
     "Explain quantum computing in simple terms",
     "Write a Python script to scrape a website",
@@ -48,70 +45,54 @@ function App() {
     });
   };
 
-  // ✅ IMPROVED: Modified to accept optional text from suggestions
   const sendMessage = async (suggestedText) => {
     const textToSend = typeof suggestedText === 'string' ? suggestedText : input;
-    
-    if (textToSend.trim() === "") return;
+    if (textToSend.trim() === "" || isLoading) return; // ✅ Prevent double-sending
 
     const userMessage = { text: textToSend, sender: "user" };
     setMessages((prev) => [...prev, userMessage]);
-    
-    // Clear input if we are using the text box
     if (!suggestedText) setInput("");
     
-    // setIsLoading(true);
-
-    // Add empty bot placeholder
+    setIsLoading(true); // ✅ Start loading
     setMessages((prev) => [...prev, { text: "", sender: "bot" }]);
 
     try {
       const response = await fetch('https://genai-python-klwp.onrender.com/text-stream', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream'
-        },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
         body: JSON.stringify({ prompt: textToSend })
       });
 
       if (!response.ok) {
         updateLastBotMessage("Server Error: Unable to get a valid response.");
+        setIsLoading(false);
         return;
       }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
-
       let fullText = "";
       let buffer = "";
 
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const parts = buffer.split("\n\n");
         buffer = parts.pop();
-
         for (const part of parts) {
           if (part.startsWith("data: ")) {
             const jsonStr = part.replace("data: ", "").trim();
             if (!jsonStr) continue;
-
             let data;
             try { data = JSON.parse(jsonStr); } catch (e) { continue; }
-
             if (data.token) {
               fullText += data.token;
               updateLastBotMessage(beautifyResponse(fullText));
             }
-            if (data.error) {
-              updateLastBotMessage("Server Error: " + data.error);
-              return;
-            }
             if (data.done) {
               updateLastBotMessage(beautifyResponse(fullText));
+              setIsLoading(false); // ✅ Stop loading when stream ends
               return;
             }
           }
@@ -119,10 +100,9 @@ function App() {
       }
     } catch (error) {
       updateLastBotMessage("Network Error: Could not connect to the server.");
-    } 
-    // finally {
-    //   setIsLoading(false);
-    // }
+    } finally {
+      setIsLoading(false); // ✅ Final safety stop
+    }
   };
 
   return (
@@ -132,8 +112,6 @@ function App() {
           <div className="logo-container">
             <img src={myLogo} alt="App Logo" className="central-logo" />
             <h2>How can I help you right now?</h2>
-            
-            {/* ✅ NEW: Interactive Suggestion Grid */}
             <div className="suggestions-grid">
               {suggestions.map((s, i) => (
                 <div key={i} className="suggestion-card" onClick={() => sendMessage(s)}>
@@ -152,9 +130,7 @@ function App() {
                       {msg.text}
                     </ReactMarkdown>
                   </div>
-                ) : (
-                  msg.text
-                )}
+                ) : msg.text}
               </div>
             </div>
           ))
@@ -162,18 +138,21 @@ function App() {
         <div ref={bottomRef} />
       </div>
 
-      {/* ✅ IMPROVED: Floating Input Bar */}
       <div className="input-container">
-        <div className="input-wrapper">
+        <div className={`input-wrapper ${isLoading ? 'loading' : ''}`}>
           <input
             type="text"
             value={input}
+            disabled={isLoading}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            placeholder="Type a message..."
+            placeholder={isLoading ? "Neurotech AI is typing..." : "Type a message..."}
           />
-          <button className="send-btn" onClick={() => sendMessage()}>
-             {/* Simple Send Icon */}
+          <button 
+            className="send-btn" 
+            onClick={() => sendMessage()} 
+            disabled={isLoading}
+          >
              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M7 11L12 6L17 11M12 18V7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
              </svg>

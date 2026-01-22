@@ -1,13 +1,38 @@
-/* ✅ Layout Improvements */
+/* --- Base Layout --- */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Critical: keeps app full screen */
+  background-color: #0c121c;
+  color: white;
+  overflow: hidden; /* Prevents double scrollbars */
+}
+
+/* --- Chat Window Logic --- */
+.chat-window {
+  flex: 1;
+  overflow-y: auto; /* Allow messages to scroll */
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Logo & Suggestions (Empty State) --- */
 .logo-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  flex: 1; /* Center vertically when no messages */
   gap: 20px;
+  text-align: center;
 }
 
-/* ✅ Prompt Suggestions Grid */
+.central-logo {
+  max-width: 150px;
+  height: auto;
+}
+
 .suggestions-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -25,19 +50,52 @@
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;
+  color: #cbd5e1;
 }
 
 .suggestion-card:hover {
   background: #334155;
   border-color: #475569;
+  transform: translateY(-2px);
 }
 
-/* ✅ Modern Input "Floating" Style */
+/* --- Message Bubbles --- */
+.message-row {
+  display: flex;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.message-row.user { justify-content: flex-end; }
+.message-row.bot { justify-content: flex-start; }
+
+.bubble {
+  max-width: 75%;
+  padding: 12px 18px;
+  border-radius: 18px;
+  font-family: 'Inter', sans-serif;
+  line-height: 1.5;
+}
+
+.user .bubble {
+  background-color: #0b93f6;
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.bot .bubble {
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  color: white;
+  border-bottom-left-radius: 4px;
+}
+
+/* --- Floating Input Style --- */
 .input-container {
   padding: 20px;
   display: flex;
   justify-content: center;
-  background: transparent; /* Makes it feel like it's floating */
+  background: linear-gradient(transparent, #0c121c 50%); /* Gradient over text */
 }
 
 .input-wrapper {
@@ -49,13 +107,22 @@
   padding: 8px 12px;
   width: 100%;
   max-width: 800px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  transition: border-color 0.3s;
+}
+
+.input-wrapper:focus-within {
+  border-color: #10a37f;
 }
 
 .input-wrapper input {
+  flex: 1;
   background: transparent;
+  border: none;
+  outline: none;
   color: white;
   font-size: 16px;
+  padding: 8px;
 }
 
 .send-btn {
@@ -67,9 +134,37 @@
   align-items: center;
   justify-content: center;
   border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
 }
 
-.send-btn svg {
-  width: 24px;
-  height: 24px;
+.send-btn:disabled {
+  background: #444;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* --- Markdown Rendering (Required for Bot responses) --- */
+.markdown-bubble {
+  word-wrap: break-word;
+}
+.markdown-bubble pre {
+  background: #00000044;
+  padding: 10px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 10px 0;
+}
+.markdown-bubble code {
+  font-family: 'Courier New', monospace;
+  background: #ffffff11;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+  .suggestions-grid { grid-template-columns: 1fr; }
+  .bubble { max-width: 90%; }
 }
