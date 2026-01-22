@@ -7,42 +7,34 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 function App() {
-  // 'messages' stores the history, 'input' stores what you are currently typing
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  // ADDED THIS LINE: Necessary for the loading animation to work
   const [isLoading, setIsLoading] = useState(false);
 
-  // ✅ ADDED: ref to auto-scroll
+  // ✅ ADDED: Predefined prompt suggestions for the UI
+  const suggestions = [
+    "Explain quantum computing in simple terms",
+    "Write a Python script to scrape a website",
+    "How do I improve my React app's performance?",
+    "Summarize the latest trends in AI for 2026"
+  ];
+
   const bottomRef = useRef(null);
 
-  // ✅ ADDED: Auto-scroll whenever messages change (streaming updates too)
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ✅ ADDED: Beautify raw text into better Markdown formatting
   const beautifyResponse = (text) => {
     if (!text) return "";
-
     let t = text;
-
-    // Add spacing around markdown bold headings
     t = t.replace(/(\*\*[^*]+\*\*)/g, "\n\n$1\n\n");
-
-    // Put numbered points on new lines
     t = t.replace(/(\s)(\d+\.)\s/g, "\n$2 ");
-
-    // Put bullet points on new lines
     t = t.replace(/(\s)([-*])\s/g, "\n$2 ");
-
-    // Reduce too many blank lines
     t = t.replace(/\n{3,}/g, "\n\n");
-
     return t.trim();
   };
 
-  // ✅ ADDED: helper to update last bot message during streaming
   const updateLastBotMessage = (newText) => {
     setMessages((prev) => {
       const updated = [...prev];
@@ -56,68 +48,38 @@ function App() {
     });
   };
 
-  // const sendMessage = async () => {
-  //   if (input.trim() === "") return;
+  // ✅ IMPROVED: Modified to accept optional text from suggestions
+  const sendMessage = async (suggestedText) => {
+    const textToSend = typeof suggestedText === 'string' ? suggestedText : input;
+    
+    if (textToSend.trim() === "") return;
 
-  //   // 1. Create a message object for the user
-  //   const userMessage = { text: input, sender: "user" };
-
-  //   // 2. Add it to the list (Right side)
-  //   setMessages([...messages, userMessage]);
-  //   const currentInput = input;
-  //   setInput(""); // Clear the text box
-
-  //   try {
-  //     // 3. Call your API (Replace with your actual URL)
-  //     // const response = await fetch('https://bhabagrahi-ai.hf.space/generate', {
-  //     const response = await fetch('https://genai-python-klwp.onrender.com/text', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({ prompt: currentInput })
-  //     });
-
-  //     const data = await response.json();
-  //     console.log(data);
-
-
-  //     // 4. Add the API response to the list (Left side)
-  //     const botMessage = { text: data.result, sender: "bot" };
-  //     setMessages((prev) => [...prev, botMessage]);
-  //   } catch (error) {
-  //     console.error("Error:", error);
-  //   }
-  // };
-
-  const sendMessage = async () => {
-    if (input.trim() === "") return;
-
-    const userMessage = { text: input, sender: "user" };
+    const userMessage = { text: textToSend, sender: "user" };
     setMessages((prev) => [...prev, userMessage]);
-    const currentInput = input;
-    setInput("");
+    
+    // Clear input if we are using the text box
+    if (!suggestedText) setInput("");
+    
     setIsLoading(true);
 
-    // ✅ ADDED: add empty bot message first (placeholder bubble)
+    // Add empty bot placeholder
     setMessages((prev) => [...prev, { text: "", sender: "bot" }]);
 
     try {
-      // ✅ CHANGED: call streaming endpoint instead of /text
       const response = await fetch('https://genai-python-klwp.onrender.com/text-stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'text/event-stream'
         },
-        body: JSON.stringify({ prompt: currentInput })
+        body: JSON.stringify({ prompt: textToSend })
       });
 
-      // ✅ ADDED: if server fails
       if (!response.ok) {
-        updateLastBotMessage("Server Error: Unable to get a valid response. Please try again later.");
+        updateLastBotMessage("Server Error: Unable to get a valid response.");
         return;
       }
 
-      // ✅ ADDED: Read streaming response
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
 
@@ -129,84 +91,60 @@ function App() {
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-
-        // SSE events separated by blank line
         const parts = buffer.split("\n\n");
-        buffer = parts.pop(); // keep leftover
+        buffer = parts.pop();
 
         for (const part of parts) {
           if (part.startsWith("data: ")) {
             const jsonStr = part.replace("data: ", "").trim();
-
-            // sometimes servers send empty data lines
             if (!jsonStr) continue;
 
             let data;
-            try {
-              data = JSON.parse(jsonStr);
-            } catch (e) {
-              continue;
-            }
+            try { data = JSON.parse(jsonStr); } catch (e) { continue; }
 
             if (data.token) {
               fullText += data.token;
-
-              // ✅ Beautify live text while streaming
               updateLastBotMessage(beautifyResponse(fullText));
             }
-
             if (data.error) {
               updateLastBotMessage("Server Error: " + data.error);
               return;
             }
-
             if (data.done) {
-              // final beautify once done
               updateLastBotMessage(beautifyResponse(fullText));
               return;
             }
           }
         }
       }
-
-      // --- ERROR CACHE LOGIC START ---
-      // (keeping your logic untouched, but streaming already handles this)
-      // --- ERROR CACHE LOGIC END ---
-
     } catch (error) {
-      // This catches network crashes (e.g., if the server is totally down)
       updateLastBotMessage("Network Error: Could not connect to the server.");
     } finally {
-      // 2. Stop loading regardless of success or failure
       setIsLoading(false);
     }
   };
 
   return (
     <div className="app-container">
-      {/* <div className="chat-window">
-        {messages.map((msg, index) => (
-          <div key={index} className={`message-row ${msg.sender}`}>
-            <div className="bubble">{msg.text}</div>
-          </div>
-        ))}
-      </div> */}
-
       <div className="chat-window">
         {messages.length === 0 ? (
           <div className="logo-container">
-            <img
-              src={myLogo}
-              alt="App Logo"
-              className="central-logo"
-            />
-            <h2>How can I help you right now ?</h2>
+            <img src={myLogo} alt="App Logo" className="central-logo" />
+            <h2>How can I help you right now?</h2>
+            
+            {/* ✅ NEW: Interactive Suggestion Grid */}
+            <div className="suggestions-grid">
+              {suggestions.map((s, i) => (
+                <div key={i} className="suggestion-card" onClick={() => sendMessage(s)}>
+                  {s}
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           messages.map((msg, index) => (
             <div key={index} className={`message-row ${msg.sender}`}>
               <div className="bubble">
-                {/* ✅ ADDED: Markdown render for bot messages */}
                 {msg.sender === "bot" ? (
                   <div className="markdown-bubble">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -220,36 +158,26 @@ function App() {
             </div>
           ))
         )}
-
-        {/* ✅ Loader disabled because streaming is the loader now */}
-        {false && isLoading && (
-          <div className="message-row bot">
-            <div className="bubble loading-bubble">
-              <div className="dot"></div>
-              <div className="dot"></div>
-              <div className="dot"></div>
-            </div>
-          </div>
-        )}
-
-        {/* ✅ ADDED: bottom marker for auto-scroll */}
         <div ref={bottomRef} />
-
       </div>
 
-      <div className="input-area">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              sendMessage();
-            }
-          }}
-          placeholder="Type a message..."
-        />
-        <button onClick={sendMessage}>Send</button>
+      {/* ✅ IMPROVED: Floating Input Bar */}
+      <div className="input-container">
+        <div className="input-wrapper">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+            placeholder="Type a message..."
+          />
+          <button className="send-btn" onClick={() => sendMessage()}>
+             {/* Simple Send Icon */}
+             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7 11L12 6L17 11M12 18V7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+             </svg>
+          </button>
+        </div>
       </div>
     </div>
   );
