@@ -12,8 +12,8 @@ function App() {
   // --- New State for Settings ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [settings, setSettings] = useState({
-    provider: "OpenAI",
-    model: "gpt-4-turbo"
+    provider: "groq",
+    model: "llama-3.1-8b-instant"
   });
 
   // --- Refs ---
@@ -162,9 +162,8 @@ function App() {
                 value={settings.provider} 
                 onChange={(e) => setSettings({...settings, provider: e.target.value})}
               >
-                <option value="OpenAI">OpenAI</option>
-                <option value="Anthropic">Anthropic</option>
-                <option value="Google">Google (Gemini)</option>
+                <option value="groq">GROQ</option>
+                <option value="hf">Hugging Face</option>
               </select>
             </div>
 
@@ -174,22 +173,16 @@ function App() {
                 value={settings.model} 
                 onChange={(e) => setSettings({...settings, model: e.target.value})}
               >
-                {settings.provider === "OpenAI" && (
+                {settings.provider === "groq" && (
                   <>
                     <option value="gpt-4-turbo">GPT-4 Turbo</option>
                     <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
                   </>
                 )}
-                {settings.provider === "Anthropic" && (
+                {settings.provider === "hf" && (
                   <>
                     <option value="claude-3-opus">Claude 3 Opus</option>
                     <option value="claude-3-sonnet">Claude 3 Sonnet</option>
-                  </>
-                )}
-                {settings.provider === "Google" && (
-                  <>
-                    <option value="gemini-pro">Gemini Pro</option>
-                    <option value="gemini-ultra">Gemini Ultra</option>
                   </>
                 )}
               </select>
