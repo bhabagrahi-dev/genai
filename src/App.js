@@ -70,9 +70,15 @@ function App() {
           if (result.status === "success" && result.models.length > 0) {
             // console.log("Success! Models received:", result.models);
             setGroqModels(result.models);
-            if (!result.models.includes(settings.model)) {
-              setSettings(prev => ({ ...prev, model: result.models[0] }));
+            // if (!result.models.includes(settings.model)) {
+            //   setSettings(prev => ({ ...prev, model: result.models[0] }));
+            // }
+            setSettings(prev => {
+            if (!result.models.includes(prev.model)) {
+              return { ...prev, model: result.models[0] };
             }
+            return prev;
+          });
           } else {
             console.error("API returned success: false or unexpected status");
             setGroqModels([]); // Clear models if status isn't success
