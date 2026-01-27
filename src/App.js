@@ -9,7 +9,7 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // --- New State for Settings ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [settings, setSettings] = useState({
@@ -60,26 +60,29 @@ function App() {
   }, [isModalOpen]);
 
   useEffect(() => {
-  if (settings.provider === "groq") {
-    axios.get('https://genai-python-klwp.onrender.com/models')
-      .then(response => {
-        console.log("Full API Response:", response);
-        console.log("Model Data:", response.data);
-        const result = response.data;
-        // setGroqModels(response.data); 
-        if (result.status === "success") {
-          console.log("Success! Models received:", result.models);
-          setGroqModels(result.models);
-        } else {
-          console.error("API returned success: false or unexpected status");
-          setGroqModels([]); // Clear models if status isn't success
-        }
-      })
-      .catch(error => {
-        console.error("Error fetching models:", error);
-      });
-  }
-}, [settings.provider]);
+    if (settings.provider === "groq") {
+      axios.get('https://genai-python-klwp.onrender.com/models')
+        .then(response => {
+          // console.log("Full API Response:", response);
+          console.log("Model Data:", response.data);
+          const result = response.data;
+          // setGroqModels(response.data); 
+          if (result.status === "success" && result.models.length > 0) {
+            // console.log("Success! Models received:", result.models);
+            setGroqModels(result.models);
+            if (!result.models.includes(settings.model)) {
+              setSettings(prev => ({ ...prev, model: result.models[0] }));
+            }
+          } else {
+            console.error("API returned success: false or unexpected status");
+            setGroqModels([]); // Clear models if status isn't success
+          }
+        })
+        .catch(error => {
+          console.error("Error fetching models:", error);
+        });
+    }
+  }, [settings.provider]);
 
   const beautifyResponse = (text) => {
     if (!text) return "";
@@ -111,7 +114,7 @@ function App() {
     const userMessage = { text: textToSend, sender: "user" };
     setMessages((prev) => [...prev, userMessage]);
     if (!suggestedText) setInput("");
-    
+
     setIsLoading(true);
     setMessages((prev) => [...prev, { text: "", sender: "bot" }]);
 
@@ -119,10 +122,10 @@ function App() {
       const response = await fetch('https://genai-python-klwp.onrender.com/text-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           prompt: textToSend,
           provider: settings.provider,
-          model: settings.model 
+          model: settings.model
         })
       });
 
@@ -180,12 +183,18 @@ function App() {
         <div className="modal-overlay">
           <div className="modal-content" ref={modalRef}>
             <h3>Model Settings</h3>
-            
+
             <div className="form-group">
               <label>Select Provider</label>
-              <select 
-                value={settings.provider} 
-                onChange={(e) => setSettings({...settings, provider: e.target.value})}
+              <select
+                value={settings.provider}
+                // onChange={(e) => setSettings({...settings, provider: e.target.value})}
+                onChange={(e) => {
+                  const nextProvider = e.target.value;
+                  // Set a valid default for the new provider immediately
+                  const nextModel = nextProvider === "groq" ? "" : "openai/gpt-oss-120b";
+                  setSettings({ provider: nextProvider, model: nextModel });
+                }}
               >
                 <option value="groq">GROQ</option>
                 <option value="hf">Hugging Face</option>
@@ -194,9 +203,9 @@ function App() {
 
             <div className="form-group">
               <label>Select Model</label>
-              <select 
-                value={settings.model} 
-                onChange={(e) => setSettings({...settings, model: e.target.value})}
+              <select
+                value={settings.model}
+                onChange={(e) => setSettings({ ...settings, model: e.target.value })}
               >
                 {/* {settings.provider === "groq" && (
                   <>
@@ -205,18 +214,18 @@ function App() {
                   </>
                 )} */}
                 {settings.provider === "groq" && (
-      <>
-        {groqModels.length > 0 ? (
-          groqModels.map((modelName, index) => (
-            <option key={index} value={modelName}>
-              {modelName}
-            </option>
-          ))
-        ) : (
-          <option disabled>Loading models...</option>
-        )}
-      </>
-    )}
+                  <>
+                    {groqModels.length > 0 ? (
+                      groqModels.map((modelName, index) => (
+                        <option key={index} value={modelName}>
+                          {modelName}
+                        </option>
+                      ))
+                    ) : (
+                      <option disabled>Loading models...</option>
+                    )}
+                  </>
+                )}
                 {settings.provider === "hf" && (
                   <>
                     <option value="openai/gpt-oss-120b"> Open AI </option>
@@ -271,14 +280,14 @@ function App() {
             onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
             placeholder={isLoading ? "Neurotech AI is typing..." : "Type a message..."}
           />
-          <button 
-            className="send-btn" 
-            onClick={() => sendMessage()} 
+          <button
+            className="send-btn"
+            onClick={() => sendMessage()}
             disabled={isLoading}
           >
-             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M7 11L12 6L17 11M12 18V7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-             </svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 11L12 6L17 11M12 18V7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
         </div>
       </div>
