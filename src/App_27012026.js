@@ -7,14 +7,7 @@ import remarkGfm from "remark-gfm";
 function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // --- New State for Settings ---
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [settings, setSettings] = useState({
-    provider: "OpenAI",
-    model: "gpt-4-turbo"
-  });
+  const [isLoading, setIsLoading] = useState(false); // ✅ Now correctly used below
 
   const suggestions = [
     "Explain quantum computing in simple terms",
@@ -54,25 +47,20 @@ function App() {
 
   const sendMessage = async (suggestedText) => {
     const textToSend = typeof suggestedText === 'string' ? suggestedText : input;
-    if (textToSend.trim() === "" || isLoading) return;
+    if (textToSend.trim() === "" || isLoading) return; // ✅ Prevent double-sending
 
     const userMessage = { text: textToSend, sender: "user" };
     setMessages((prev) => [...prev, userMessage]);
     if (!suggestedText) setInput("");
     
-    setIsLoading(true);
+    setIsLoading(true); // ✅ Start loading
     setMessages((prev) => [...prev, { text: "", sender: "bot" }]);
 
     try {
       const response = await fetch('https://genai-python-klwp.onrender.com/text-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
-        // ✅ Included settings in the body so your backend knows which model to use
-        body: JSON.stringify({ 
-          prompt: textToSend,
-          provider: settings.provider,
-          model: settings.model 
-        })
+        body: JSON.stringify({ prompt: textToSend })
       });
 
       if (!response.ok) {
@@ -104,7 +92,7 @@ function App() {
             }
             if (data.done) {
               updateLastBotMessage(beautifyResponse(fullText));
-              setIsLoading(false);
+              setIsLoading(false); // ✅ Stop loading when stream ends
               return;
             }
           }
@@ -113,67 +101,12 @@ function App() {
     } catch (error) {
       updateLastBotMessage("Network Error: Could not connect to the server.");
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // ✅ Final safety stop
     }
   };
 
   return (
     <div className="app-container">
-      {/* --- Settings Button --- */}
-      <button className="settings-trigger" onClick={() => setIsModalOpen(true)}>
-        ⚙️ Settings
-      </button>
-
-      {/* --- Settings Modal --- */}
-      {isModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>Model Settings</h3>
-            
-            <div className="form-group">
-              <label>Select Provider</label>
-              <select 
-                value={settings.provider} 
-                onChange={(e) => setSettings({...settings, provider: e.target.value})}
-              >
-                <option value="OpenAI">OpenAI</option>
-                <option value="Anthropic">Anthropic</option>
-                <option value="Google">Google (Gemini)</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Select Model</label>
-              <select 
-                value={settings.model} 
-                onChange={(e) => setSettings({...settings, model: e.target.value})}
-              >
-                {settings.provider === "OpenAI" && (
-                  <>
-                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                  </>
-                )}
-                {settings.provider === "Anthropic" && (
-                  <>
-                    <option value="claude-3-opus">Claude 3 Opus</option>
-                    <option value="claude-3-sonnet">Claude 3 Sonnet</option>
-                  </>
-                )}
-                {settings.provider === "Google" && (
-                  <>
-                    <option value="gemini-pro">Gemini Pro</option>
-                    <option value="gemini-ultra">Gemini Ultra</option>
-                  </>
-                )}
-              </select>
-            </div>
-
-            <button className="close-btn" onClick={() => setIsModalOpen(false)}>Save & Close</button>
-          </div>
-        </div>
-      )}
-
       <div className="chat-window">
         {messages.length === 0 ? (
           <div className="logo-container">
