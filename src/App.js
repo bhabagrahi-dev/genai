@@ -175,14 +175,13 @@ function App() {
               >
                 {settings.provider === "groq" && (
                   <>
-                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                    <option value="1"> Test 1 </option>
+                    <option value="2"> Test 2 </option>
                   </>
                 )}
                 {settings.provider === "hf" && (
                   <>
-                    <option value="claude-3-opus">Claude 3 Opus</option>
-                    <option value="claude-3-sonnet">Claude 3 Sonnet</option>
+                    <option value="openai/gpt-oss-120b"> Open AI </option>
                   </>
                 )}
               </select>
