@@ -198,12 +198,25 @@ function App() {
                 value={settings.model} 
                 onChange={(e) => setSettings({...settings, model: e.target.value})}
               >
-                {settings.provider === "groq" && (
+                {/* {settings.provider === "groq" && (
                   <>
                     <option value="1"> Test 1 </option>
                     <option value="2"> Test 2 </option>
                   </>
-                )}
+                )} */}
+                {settings.provider === "groq" && (
+      <>
+        {groqModels.length > 0 ? (
+          groqModels.map((modelName, index) => (
+            <option key={index} value={modelName}>
+              {modelName}
+            </option>
+          ))
+        ) : (
+          <option disabled>Loading models...</option>
+        )}
+      </>
+    )}
                 {settings.provider === "hf" && (
                   <>
                     <option value="openai/gpt-oss-120b"> Open AI </option>
