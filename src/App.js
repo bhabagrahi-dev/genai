@@ -16,6 +16,10 @@ function App() {
     model: "gpt-4-turbo"
   });
 
+  // --- Refs ---
+  const modalRef = useRef(null); // Ref for outside click detection
+  const bottomRef = useRef(null);
+
   const suggestions = [
     "Explain quantum computing in simple terms",
     "Write a Python script to scrape a website",
@@ -23,11 +27,34 @@ function App() {
     "Summarize the latest trends in AI for 2026"
   ];
 
-  const bottomRef = useRef(null);
-
+  // Auto-scroll to bottom
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // --- Modal Dismiss Logic (Escape key & Outside click) ---
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setIsModalOpen(false);
+    };
+
+    const handleClickOutside = (e) => {
+      // If modal is open and user clicks the overlay (not the content box)
+      if (modalRef.current && !modalRef.current.contains(e.target)) {
+        setIsModalOpen(false);
+      }
+    };
+
+    if (isModalOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isModalOpen]);
 
   const beautifyResponse = (text) => {
     if (!text) return "";
@@ -67,7 +94,6 @@ function App() {
       const response = await fetch('https://genai-python-klwp.onrender.com/text-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
-        // ✅ Included settings in the body so your backend knows which model to use
         body: JSON.stringify({ 
           prompt: textToSend,
           provider: settings.provider,
@@ -127,7 +153,7 @@ function App() {
       {/* --- Settings Modal --- */}
       {isModalOpen && (
         <div className="modal-overlay">
-          <div className="modal-content">
+          <div className="modal-content" ref={modalRef}>
             <h3>Model Settings</h3>
             
             <div className="form-group">
