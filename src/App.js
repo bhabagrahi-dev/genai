@@ -3,6 +3,7 @@ import './App.css';
 import myLogo from './ai_logo.png';
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import axios from 'axios';
 
 function App() {
   const [messages, setMessages] = useState([]);
@@ -15,6 +16,8 @@ function App() {
     provider: "groq",
     model: "llama-3.1-8b-instant"
   });
+
+  const [groqModels, setGroqModels] = useState([]);
 
   // --- Refs ---
   const modalRef = useRef(null); // Ref for outside click detection
@@ -55,6 +58,28 @@ function App() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isModalOpen]);
+
+  useEffect(() => {
+  if (settings.provider === "groq") {
+    axios.get('https://genai-python-klwp.onrender.com/models')
+      .then(response => {
+        console.log("Full API Response:", response);
+        console.log("Model Data:", response.data);
+        const result = response.data;
+        // setGroqModels(response.data); 
+        if (result.status === "success") {
+          console.log("Success! Models received:", result.models);
+          setGroqModels(result.models);
+        } else {
+          console.error("API returned success: false or unexpected status");
+          setGroqModels([]); // Clear models if status isn't success
+        }
+      })
+      .catch(error => {
+        console.error("Error fetching models:", error);
+      });
+  }
+}, [settings.provider]);
 
   const beautifyResponse = (text) => {
     if (!text) return "";
